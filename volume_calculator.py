@@ -169,14 +169,14 @@ class STLUtils:
 
                 if unit == "cm":
                     print("Volume:", totalVolume, "cm^3")
-                    print("Surface Area:", totalArea, "cm^3")
+                    print("Surface Area:", totalArea, "cm^2")
                     print("Density:", density, "g/cm^3")
                 else:
                     totalVolume = self.cm3_To_inch3Transform(totalVolume)
                     totalArea = self.cm3_To_inch3Transform(totalArea)
                     density = self.cm3_To_inch3Transform(density)
                     print("Volume:", totalVolume, "inch^3")
-                    print("Surface Area:", totalArea, "inch^3")
+                    print("Surface Area:", totalArea, "inch^2")
                     print("Density:", density, "g/in^3")
         except Exception as e:
             print(e)
