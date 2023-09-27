@@ -8,6 +8,7 @@ Notes: Material Mass Source is https://www.toybuilderlabs.com/blogs/news/1305311
 Contributors: Saijin_Naib (Synper311@aol.com)
 '''
 
+import math
 import struct
 import sys
 
@@ -74,6 +75,9 @@ class STLUtils:
     # Calculate volume for the 3D mesh using Tetrahedron volume
     # based on: http://stackoverflow.com/questions/1406029/how-to-calculate-the-volume-of-a-3d-mesh-object-the-surface-of-which-is-made-up
     def signedVolumeOfTriangle(self, p1, p2, p3):
+        # 0 = X
+        # 1 = Y
+        # 2 = Z
         v321 = p3[0] * p2[1] * p1[2]
         v231 = p2[0] * p3[1] * p1[2]
         v312 = p3[0] * p1[1] * p2[2]
@@ -81,6 +85,21 @@ class STLUtils:
         v213 = p2[0] * p1[1] * p3[2]
         v123 = p1[0] * p2[1] * p3[2]
         return (1.0 / 6.0) * (-v321 + v231 + v312 - v132 - v213 + v123)
+    
+    def area_of_triangle(self, p1, p2, p3):
+        # 0 = X
+        # 1 = Y
+        # 2 = Z
+        ax = p2[0] - p1[0]
+        ay = p2[1] - p1[1]
+        az = p2[2] - p1[2]
+        bx = p3[0] - p1[0]
+        by = p3[1] - p1[1]
+        bz = p3[2] - p1[2]
+        cx = ay*bz - az*by
+        cy = az*bx - ax*bz
+        cz = ax*by - ay*bx
+        return 0.5 * math.sqrt(cx*cx + cy*cy + cz*cz)
 
     def unpack(self, sig, l):
         s = self.f.read(l)
@@ -101,7 +120,7 @@ class STLUtils:
         self.points.append(p3)
         self.triangles.append((l, l + 1, l + 2))
         self.bytecount.append(b[0])
-        return self.signedVolumeOfTriangle(p1, p2, p3)
+        return [p1, p2, p3]
 
     def read_length(self):
         length = struct.unpack("@i", self.f.read(4))
@@ -123,7 +142,9 @@ class STLUtils:
         print(infilename)
         self.resetVariables()
         totalVolume = 0
+        totalArea = 0
         totalMass = 0
+        density = 0
         try:
             self.f = open(infilename, "rb")
             self.read_header()
@@ -131,11 +152,15 @@ class STLUtils:
             print("total triangles:", l)
             try:
                 while True:
-                    totalVolume += self.read_triangle()
+                    edge = self.read_triangle()
+                    totalVolume += self.signedVolumeOfTriangle(edge[0], edge[1], edge[2])
+                    totalArea += self.area_of_triangle(edge[0], edge[1], edge[2])
             except Exception as e:
                 print("End calculate triangles volume")
-            totalVolume = totalVolume / 1000
+            totalVolume /= 1000
+            totalArea /= 1000
             totalMass = self.calculateMassCM3(totalVolume)
+            density = totalMass / totalVolume
 
             if totalMass <= 0:
                 print('Total mass could not be calculated')
@@ -143,10 +168,16 @@ class STLUtils:
                 print('Total mass:', totalMass, 'g')
 
                 if unit == "cm":
-                    print("Total volume:", totalVolume, "cm^3")
+                    print("Volume:", totalVolume, "cm^3")
+                    print("Surface Area:", totalArea, "cm^3")
+                    print("Density:", density, "g/cm^3")
                 else:
                     totalVolume = self.cm3_To_inch3Transform(totalVolume)
-                    print("Total volume:", totalVolume, "inch^3")
+                    totalArea = self.cm3_To_inch3Transform(totalArea)
+                    density = self.cm3_To_inch3Transform(density)
+                    print("Volume:", totalVolume, "inch^3")
+                    print("Surface Area:", totalArea, "inch^3")
+                    print("Density:", density, "g/in^3")
         except Exception as e:
             print(e)
         return totalVolume
