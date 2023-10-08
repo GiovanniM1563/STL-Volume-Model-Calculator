@@ -11,6 +11,8 @@ Contributors: Saijin_Naib (Synper311@aol.com)
 import math
 import struct
 import sys
+import numpy as np
+import trimesh
 
 print('Choose desired print material of STL file below:')
 print('1 = ABS')
@@ -77,7 +79,7 @@ class STLUtils:
     def signedVolumeOfTriangle(self, p1, p2, p3):
         # 0 = X
         # 1 = Y
-        # 2 = Z
+        # 2 = Z 
         v321 = p3[0] * p2[1] * p1[2]
         v231 = p2[0] * p3[1] * p1[2]
         v312 = p3[0] * p1[1] * p2[2]
@@ -89,17 +91,18 @@ class STLUtils:
     def area_of_triangle(self, p1, p2, p3):
         # 0 = X
         # 1 = Y
-        # 2 = Z
+        # 2 = Z 
         ax = p2[0] - p1[0]
         ay = p2[1] - p1[1]
         az = p2[2] - p1[2]
         bx = p3[0] - p1[0]
-        by = p3[1] - p1[1]
+        by = p3[1] - p1[1]  
         bz = p3[2] - p1[2]
         cx = ay*bz - az*by
         cy = az*bx - ax*bz
         cz = ax*by - ay*bx
-        return 0.5 * math.sqrt(cx*cx + cy*cy + cz*cz)
+        v = np.matrix([[ax - cx, ay - cy, az - cz], [bx - cx, by - cy, bz - cz]])
+        return 0.5 * math.sqrt(np.linalg.det(v*v.T))
 
     def unpack(self, sig, l):
         s = self.f.read(l)
@@ -151,12 +154,19 @@ class STLUtils:
             l = self.read_length()
             print("total triangles:", l)
             try:
+                i = 0
                 while True:
                     edge = self.read_triangle()
+                    i += 1
+                    # print("reading points", edge)
                     totalVolume += self.signedVolumeOfTriangle(edge[0], edge[1], edge[2])
+                    # print("After Volume Call", edge)
                     totalArea += self.area_of_triangle(edge[0], edge[1], edge[2])
+                    # print("After Triangle Call", edge)
             except Exception as e:
-                print("End calculate triangles volume")
+                print("ERROR: ", e)
+                print(i)
+
             totalVolume /= 1000
             totalArea /= 1000
             totalMass = self.calculateMassCM3(totalVolume)
@@ -182,8 +192,7 @@ class STLUtils:
             print(e)
         return totalVolume
 
-
-if __name__ == '__main__':
+def main():
     if len(sys.argv) == 1:
         print("Define model to calculate volume ej: python measure_volume.py torus.stl")
     else:
@@ -192,3 +201,7 @@ if __name__ == '__main__':
             mySTLUtils.calculateVolume(sys.argv[1], "inch")
         else:
             mySTLUtils.calculateVolume(sys.argv[1], "cm")
+
+if __name__ == '__main__':
+    main()
+
