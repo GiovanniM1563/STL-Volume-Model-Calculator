@@ -2,7 +2,7 @@ import trimesh
 import numpy as np
 
 # Load your 3D mesh (replace 'your_mesh.obj' with your mesh file)
-mesh = trimesh.load_mesh('LowerBase.stl')
+mesh = trimesh.load_mesh('../res/upper_1.stl')
 
 # Define the normal vector
 normal = np.array([0, 0, 1])

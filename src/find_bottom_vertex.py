@@ -20,7 +20,7 @@ def find_bottommost_vertex(mesh):
     return bottommost_vertex
 
 # Load your 3D mesh (replace 'your_mesh.obj' with your mesh file)
-mesh = trimesh.load_mesh('LowerBase.stl')
+mesh = trimesh.load_mesh('../res/lower_1.stl')
 
 # Find the bottommost vertex
 bottommost_vertex = find_bottommost_vertex(mesh)

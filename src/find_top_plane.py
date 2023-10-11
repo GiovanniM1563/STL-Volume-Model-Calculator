@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 #Code finds the top most plane of the mesh. useful for slicing as you can go all the way to the bottom.  
 
 # Load your 3D mesh (replace 'your_mesh.obj' with your mesh file)
-mesh = trimesh.load_mesh('LowerBase.stl')
+mesh = trimesh.load_mesh('../res/lower_1.stl')
 
 # Compute vertex normals of the mesh
 normals = mesh.vertex_normals
