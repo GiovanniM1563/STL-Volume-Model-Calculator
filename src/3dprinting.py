@@ -1,6 +1,7 @@
 import math
 import struct
 import sys
+import traceback
 import numpy as np
 import trimesh
 from stl_util import STL_Util
@@ -27,26 +28,22 @@ def main():
             denture.reference = sys.argv[1]
             stl_helper.read_3d_model(path=denture.reference)
             denture.triangles_sum = stl_helper.get_sum_triangles(ref=denture.reference) 
+            
+            # Load the mesh before beginning complex calculations
             denture.mesh = trimesh.load_mesh(denture.reference)
+            # denture.mesh.show()
 
             stl_helper.calculate_geometric_attributes(model=denture)
+            stl_helper.find_top_most_vertex(model=denture)
             print('--------- Denture 3D Model Details ---------')
-            print('Surface Area:', denture.surface_area, 'cm^2')
-            print('Volume:', denture.volume)
-            print('Density:', denture.density)
-            print('Mass:', denture.mass)
-    except Exception as e:
-        print(e)
-
-
-    # lower_brace = trimesh.load('lower_2.stl')
-    # scene = trimesh.Scene(lower_brace)
-    # scene.add_geometry(geometry=lower_brace)
-    # print(scene.area/1000, "cm^2")
-    # print(scene.volume/1000, "cm^3")
-    # scene.moment_inertia
-    # # print(scene.density)
-    # # scene.show()
+            print('Surface Area using Linear Algebra:', denture.surface_area, 'cm^2')
+            # print('Surface Area using Trimesh:', denture.mesh.area/1000, 'cm^2')
+            print('Volume using Tetrahedron Formula:', denture.volume, 'cm^3')
+            print('Volume using Trimesh:', denture.mesh.volume/1000, 'cm^3')
+            print('Density:', denture.density, 'g/cm^3')
+            print('Mass:', denture.mass, 'g')
+    except:
+        print(traceback.format_exc())
 
 if __name__ == "__main__":
     main()
