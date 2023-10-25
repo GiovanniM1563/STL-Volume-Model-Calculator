@@ -5,6 +5,7 @@ import traceback
 from io import BufferedReader
 
 import trimesh
+from trimesh import creation, transformations
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -63,7 +64,7 @@ class STL_Util:
         cy = az*bx - ax*bz
         cz = ax*by - ay*bx
         v = np.matrix([[ax - cx, ay - cy, az - cz], [bx - cx, by - cy, bz - cz]])
-        return 0.5 * np.sqrt(np.linalg.det(v*v.T))
+        return 0.5 * np.sqrt(np.abs(np.linalg.det(v*v.T)))
     
     def find_bottom_most_vertex(self, model) -> np.ndarray:
         """
@@ -98,19 +99,25 @@ class STL_Util:
 
         num_slices = 30  # Adjust the number of slices as needed
 
+        # transform_plane = creation.box(extents=[20, 20, 0.01])
+        angle = math.pi / 4
+        dr = [0,0,1]
+        center = [0,0,0]
+        model.mesh.apply_transform(transformations.rotation_matrix(angle, dr, center))
+
         # Iterate through different heights and create slices
         for i in range(num_slices):
             # Calculate the Z-coordinate of the slicing plane origin for the current slice
             z_coord = i * -slice_thickness
-            
+
             if not np.allclose(z_coord, lowest_z):
                 # Set the Z-coordinate of the slicing plane origin
                 point_on_plane = np.array([0, 0, z_coord])
-                    
+
                 # Perform the slice using the defined plane
                 sliced_mesh_1 = trimesh.intersections.slice_mesh_plane(model.mesh, plane_normal=normal, plane_origin=point_on_plane, face_index=None, cap=True, cached_dots=None,  engine=None )
                 # Visualize the current slice
-                # sliced_mesh.show()
+                # sliced_mesh_1.show()
 
                 point_on_plane[2] = z_coord + slice_thickness
 
@@ -122,22 +129,21 @@ class STL_Util:
                 break
         
         total_area = 0
-        slice_area = []
+        slice_area = {}
         for slice in slices:
-            slice.show()
             for i in np.arange(len(slice.triangles)):
-                p1 = slice.triangles[i][0]
-                p2 = slice.triangles[i][1]
-                p3 = slice.triangles[i][2]
-                vertex_area  = self.area_of_triangle(p1, p2, p3)
-                total_area += vertex_area
+                key = f'{slice.triangles[i][0]}'.format()
+                if key not in slice_area:
+                    p1 = slice.triangles[i][0]
+                    p2 = slice.triangles[i][1]
+                    p3 = slice.triangles[i][2]
+                    vertex_area = self.area_of_triangle(p1, p2, p3)
+                    slice_area[key] = [p1, p2, p3, vertex_area]
+                    total_area += vertex_area
 
-            if not np.isnan(total_area):
-                print('t area:', total_area / 1000, 'cm^2')
-                slice_area.append(total_area / 1000)
-            total_area = 0.0
+            print('t area:', total_area / 1000, 'cm^2')
 
-        print(sum(slice_area), 'cm^2')
+        print('Final model Surface Area:', total_area / 1000, 'cm^2')
 
         # slices[14].show()
 
