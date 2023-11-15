@@ -5,10 +5,12 @@ import traceback
 from io import BufferedReader
 
 import trimesh
-from trimesh import creation, transformations
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from trimesh import creation, transformations
+from scipy.spatial.transform import Rotation
+
 
 class STL_Util:
     """
@@ -89,21 +91,18 @@ class STL_Util:
         slices = []
         lowest_z = self.find_bottom_most_vertex(model)[2]
 
-        # Define the normal vector
-        normal = np.array([0, 0, 1])
-        normal_down = np.array([0, 0, -1])
-
         # Define the desired number of slices and thickness of each slice
         slice_thickness = 1  # Adjust the slice thickness as needed
-        print(lowest_z)
+        num_slices = 90  # Adjust the number of slices as needed
 
-        num_slices = 30  # Adjust the number of slices as needed
+        # User-defined angle for plane orientation in degrees
+        slice_angle_degrees = 45 # Adjust the angle as needed
 
-        # transform_plane = creation.box(extents=[20, 20, 0.01])
-        angle = math.pi / 4
-        dr = [0,0,1]
-        center = [0,0,0]
-        model.mesh.apply_transform(transformations.rotation_matrix(angle, dr, center))
+        # Convert the user-defined angle to radians
+        slice_angle_radians = np.radians(slice_angle_degrees)
+
+        # Define the normal vector for the initial slicing plane
+        normal = np.array([0, 0, 1])
 
         # Iterate through different heights and create slices
         for i in range(num_slices):
@@ -114,25 +113,59 @@ class STL_Util:
                 # Set the Z-coordinate of the slicing plane origin
                 point_on_plane = np.array([0, 0, z_coord])
 
+                # Create a rotation matrix for the user-defined angle
+                rotation_matrix = Rotation.from_euler('x', slice_angle_radians, degrees=False)
+
+                # Rotate the normal vector to orient the plane
+                rotated_normal = rotation_matrix.apply(normal)
+
                 # Perform the slice using the defined plane
-                sliced_mesh_1 = trimesh.intersections.slice_mesh_plane(model.mesh, plane_normal=normal, plane_origin=point_on_plane, face_index=None, cap=True, cached_dots=None,  engine=None )
-                # Visualize the current slice
-                # sliced_mesh_1.show()
+                sliced_mesh = trimesh.intersections.slice_mesh_plane(
+                    model.mesh,
+                    plane_normal=rotated_normal,
+                    plane_origin=point_on_plane,
+                    face_index=None,
+                    cap=True,
+                    cached_dots=None,
+                    engine=None
+                )
 
-                point_on_plane[2] = z_coord + slice_thickness
+                # Create a slice on the opposite side by rotating the plane 180 degrees
+                reversed_rotation_matrix = Rotation.from_euler('x', np.pi, degrees=False)
+                reversed_normal = reversed_rotation_matrix.apply(rotated_normal)
 
-                sliced_mesh_2 = trimesh.intersections.slice_mesh_plane(sliced_mesh_1, plane_normal=normal_down, plane_origin=point_on_plane, face_index=None, cap=True, cached_dots=None,  engine=None )
-                slices.append(sliced_mesh_2)
+                # Adjust the Z-coordinate to add the slice thickness
+                reversed_point_on_plane = point_on_plane + np.array([0, 0, slice_thickness])
 
-                # sliced_mesh_2.show()
+                # Perform the opposite slice
+                reversed_sliced_mesh = trimesh.intersections.slice_mesh_plane(
+                    sliced_mesh,
+                    plane_normal=reversed_normal,
+                    plane_origin=reversed_point_on_plane,
+                    face_index=None,
+                    cap=True,
+                    cached_dots=None,
+                    engine=None
+                )
+
+                slices.append(reversed_sliced_mesh)
             else:
                 break
-        
+
         total_area = 0
         slice_area = {}
+        garbage = set()
+        name = trimesh.Scene()
         for slice in slices:
             for i in np.arange(len(slice.triangles)):
-                key = f'{slice.triangles[i][0]}'.format()
+                x1, y1, z1 = slice.triangles[i][0][0], slice.triangles[i][0][1], slice.triangles[i][0][2]
+                x2, y2, z2 = slice.triangles[i][0][0], slice.triangles[i][0][1], slice.triangles[i][0][2]
+                x3, y3, z3 = slice.triangles[i][0][0], slice.triangles[i][0][1], slice.triangles[i][0][2]
+                x = x1 + x2 + x3
+                y = y1 + y2 + y3
+                z = z1 + z2 + z3
+                key = (x,y,z)
+                # print(key)
                 if key not in slice_area:
                     p1 = slice.triangles[i][0]
                     p2 = slice.triangles[i][1]
@@ -140,12 +173,14 @@ class STL_Util:
                     vertex_area = self.area_of_triangle(p1, p2, p3)
                     slice_area[key] = [p1, p2, p3, vertex_area]
                     total_area += vertex_area
+                else:
+                    garbage.add(key)
 
-            print('t area:', total_area / 1000, 'cm^2')
-
+            # print('t area:', total_area / 1000, 'cm^2')
+        name.add_geometry(slices)
+        name.show()
         print('Final model Surface Area:', total_area / 1000, 'cm^2')
-
-        # slices[14].show()
+        print('seen this many duplicate points: ', len(garbage))
 
     # Documentation required here to understand what this is doing
     def unpack(self, sig, byte):
