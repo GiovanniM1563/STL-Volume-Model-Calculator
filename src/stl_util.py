@@ -219,14 +219,12 @@ class STL_Util:
     def calculate_geometric_attributes(self, model) -> None:
         try:
             # We want to slice model, so this for loop will change once we implement slicing
-            f = open('logs/binary_data.csv', 'w')
             for _ in range(model.triangles_sum):
                 edge = self.read_triangle(model=model)
                 # f.write('{}{}{}{}\n'.format(edge[0], edge[1], edge[2], edge[3]))
                 model.surface_area += self.area_of_triangle(edge[0], edge[1], edge[2])
                 model.volume += self.volume_of_triangle(edge[0], edge[1], edge[2])
                 # print(model.volume, edge[0], edge[1], edge[2])
-            f.close()
             model.volume /= 1000
             model.surface_area /= 1000
             model.mass = model.material['Resin'] * model.volume
