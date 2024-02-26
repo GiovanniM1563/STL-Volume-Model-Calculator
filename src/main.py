@@ -28,7 +28,7 @@ def main():
 
         # Change 
         
-        denture.reference = '../res/LowerBase.stl'
+        denture.reference = '../res/Upper_1.stl'
         stl_helper.read_3d_model(path=denture.reference)
         denture.triangles_sum = stl_helper.get_sum_triangles(ref=denture.reference) 
         
